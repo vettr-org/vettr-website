@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { SiteHeader } from "@/components/site-header";
+import { SiteChrome } from "@/components/site-chrome";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,8 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <SiteHeader />
-        {children}
+        <SiteChrome>{children}</SiteChrome>
       </body>
     </html>
   );

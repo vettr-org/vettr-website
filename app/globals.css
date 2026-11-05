@@ -741,6 +741,18 @@ filter:brightness(0)}
 color:#666}
 .legal-page .footer-divider{
 background:#3333334d}
+/* WebView embeds drop the site chrome and reclaim the header offset. */
+html:has(.legal-embed){
+  background:var(--paper);
+color-scheme:light}
+.legal-embed{
+  min-height:100dvh;
+background:var(--paper)}
+.legal-embed .legal-main{
+  padding-top:calc(24px + env(safe-area-inset-top,0px));
+  padding-right:calc(24px + env(safe-area-inset-right,0px));
+  padding-bottom:calc(48px + env(safe-area-inset-bottom,0px));
+padding-left:calc(24px + env(safe-area-inset-left,0px))}
 @media(min-width:1600px){
   .hiring-grid{
   gap:136px}
@@ -883,6 +895,11 @@ background:#3333334d}
   width:min(480px,100%)}
   .legal-page .site-footer{
   padding-top:72px}
+  .legal-embed .legal-main{
+    padding-top:calc(24px + env(safe-area-inset-top,0px));
+    padding-right:calc(20px + env(safe-area-inset-right,0px));
+    padding-bottom:calc(40px + env(safe-area-inset-bottom,0px));
+  padding-left:calc(20px + env(safe-area-inset-left,0px))}
 }
 @media(max-width:480px){
   .hero-copy h1{

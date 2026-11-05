@@ -39,7 +39,7 @@ The legal draft retains its supplied `[Date]`, `[ADDRESS]`, legacy mail destinat
 - `components/phone-preview.tsx`: reusable, decorative app illustration assembled from local assets.
 - `components/store-links.tsx`: shared App Store / Google Play buttons with complete 360 × 120 PNGs rendered at 120 × 40.
 - `components/phrase-cycler.tsx`: one shuffled 15-phrase deck shared by two annotation positions; 360ms entrance, 4-second hold, 260ms fade-out, then a 300ms pause before the next entrance. Pauses in background tabs, respects reduced motion, and cleans up on route changes.
-- `components/contact-form.tsx`: client-side validation and typed backend handoff event.
+- `components/contact-form.tsx`: client-side validation and Supabase-backed submission via server action.
 - `components/terms-content.tsx`: supplied legal content, rendered as static React markup.
 
 All images and brand fonts are under `public/assets`. Font license notices supplied with the original assets are retained. Confirm your existing Visby CF and New York Small web-font licensing before public distribution.
@@ -48,15 +48,9 @@ The latest standalone refinements are included: right-hand annotation moved up/r
 
 ## Backend integration
 
-No API endpoints or form delivery service are configured. The form does not log or persist personal data. An unhandled submission displays that the preview is not connected and retains the entered text. The server-rendered submit button remains disabled until hydration, preventing accidental no-JavaScript submission.
+The contact form posts to the `submitContact` server action in `app/contact/actions.ts`, which validates the fields and inserts a row into Supabase `public.contact_submissions` using a server-only client (`SUPABASE_URL` and `SUPABASE_SECRET_KEY`). `SUPABASE_SECRET_KEY` must be the **service_role** secret from Supabase → Project Settings → API Keys — the anon/publishable key will fail inserts. Copy `.env.example` to `.env.local` for local development (typically Vettr STAGING). Production hosting should point at Vettr PROD. Do not commit secrets or expose them as `NEXT_PUBLIC_` variables.
 
-`ContactSubmissionDetail` is exported from `components/contact-form.tsx`. After browser validation, the form dispatches a bubbling, cancelable `workedwith:contact-submit` event with:
-
-- `data`: `name`, `email`, `topic`, `message`.
-- `form`: the form element.
-- `status`: the live status paragraph.
-
-An integration listener can call `event.preventDefault()` to claim the event, submit to your endpoint, and update `event.detail.status`. Alternatively, connect the submit handler directly to your preferred server action or API route. Add your server-side validation and abuse protection as part of that integration.
+The server-rendered submit button remains disabled until hydration, preventing accidental no-JavaScript submission. Failed inserts keep the entered text and show a generic error.
 
 Store buttons dispatch `workedwith:store-click` on `window` and log `[WorkedWith] store-click`, with `store` (`app-store` / `google-play`) and `placement` (`hero` / `hiring`). They do not navigate.
 

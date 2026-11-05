@@ -1,17 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useSyncExternalStore, type SubmitEvent } from "react";
+import { useRef, useState, useSyncExternalStore, type SubmitEvent } from "react";
+import { submitContact } from "@/app/contact/actions";
+import { CONTACT_TOPICS } from "@/lib/contact";
 
-export const CONTACT_TOPICS = [
-  "General Feedback", "Profile Impersonation", "Profile Removal", "General Question", "Partnership inquiry",
-] as const;
-
-export type ContactSubmissionDetail = {
-  data: { name: string; email: string; topic: string; message: string };
-  form: HTMLFormElement;
-  status: HTMLParagraphElement;
-};
+export { CONTACT_TOPICS };
 
 // Keep submission disabled in server-rendered/no-JS HTML, and enable it on hydration.
 const subscribe = () => () => {};
@@ -21,24 +15,29 @@ const serverSnapshot = () => false;
 export function ContactForm() {
   const ready = useSyncExternalStore(subscribe, clientSnapshot, serverSnapshot);
   const status = useRef<HTMLParagraphElement>(null);
+  const [pending, setPending] = useState(false);
 
-  function submit(event: SubmitEvent<HTMLFormElement>) {
+  async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
-    if (!form.reportValidity() || !status.current) return;
-    const values = new FormData(form);
-    const detail: ContactSubmissionDetail = {
-      form, status: status.current,
-      data: {
-        name: String(values.get("name") ?? ""), email: String(values.get("email") ?? ""),
-        topic: String(values.get("topic") ?? ""), message: String(values.get("message") ?? ""),
-      },
-    };
-    // A backend integration can claim the event and manage the supplied status node.
-    const unhandled = form.dispatchEvent(new CustomEvent<ContactSubmissionDetail>("workedwith:contact-submit", {
-      bubbles: true, cancelable: true, detail,
-    }));
-    if (unhandled) status.current.textContent = "This preview isn’t connected yet. Your message hasn’t been sent.";
+    if (!form.reportValidity() || !status.current || pending) return;
+
+    setPending(true);
+    status.current.textContent = "Sending…";
+
+    try {
+      const result = await submitContact(new FormData(form));
+      if (result.ok) {
+        form.reset();
+        status.current.textContent = "Thanks — your message has been sent.";
+      } else {
+        status.current.textContent = result.error;
+      }
+    } catch {
+      status.current.textContent = "Something went wrong. Please try again.";
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -54,8 +53,8 @@ export function ContactForm() {
         <Image className="select-chevron" src="/assets/cbe52.svg" width={10} height={18} alt="" unoptimized />
       </label>
       <label><span className="sr-only">What’s on your mind?</span><textarea name="message" placeholder="What’s on your mind?" required maxLength={10000} /></label>
-      <button className="gradient-button" type="submit" disabled={!ready}>Submit</button>
-      <noscript><p>Please enable JavaScript to use this form preview. No message has been sent.</p></noscript>
+      <button className="gradient-button" type="submit" disabled={!ready || pending}>Submit</button>
+      <noscript><p>Please enable JavaScript to use this form. No message has been sent.</p></noscript>
       <p id="form-status" className="form-status" role="status" aria-live="polite" ref={status} />
     </form>
   );
