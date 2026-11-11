@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import { useRef, useState, useSyncExternalStore, type SubmitEvent } from "react";
-import { submitContact } from "@/app/contact/actions";
 import { CONTACT_TOPICS } from "@/lib/contact";
+import { submitContact } from "@/lib/submit-contact";
 
 export { CONTACT_TOPICS };
 

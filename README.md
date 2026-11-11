@@ -39,7 +39,7 @@ The legal draft retains its supplied `[Date]`, `[ADDRESS]`, legacy mail destinat
 - `components/phone-preview.tsx`: reusable, decorative app illustration assembled from local assets.
 - `components/store-links.tsx`: shared App Store / Google Play buttons with complete 360 × 120 PNGs rendered at 120 × 40.
 - `components/phrase-cycler.tsx`: one shuffled 15-phrase deck shared by two annotation positions; 360ms entrance, 4-second hold, 260ms fade-out, then a 300ms pause before the next entrance. Pauses in background tabs, respects reduced motion, and cleans up on route changes.
-- `components/contact-form.tsx`: client-side validation and Supabase-backed submission via server action.
+- `components/contact-form.tsx`: client-side validation and Supabase-backed submission via the `submit-contact` Edge Function.
 - `components/terms-content.tsx`: supplied legal content, rendered as static React markup.
 
 All images and brand fonts are under `public/assets`. Font license notices supplied with the original assets are retained. Confirm your existing Visby CF and New York Small web-font licensing before public distribution.
@@ -48,7 +48,7 @@ The latest standalone refinements are included: right-hand annotation moved up/r
 
 ## Backend integration
 
-The contact form posts to the `submitContact` server action in `app/contact/actions.ts`, which validates the fields and inserts a row into Supabase `public.contact_submissions` using a server-only client (`SUPABASE_URL` and `SUPABASE_SECRET_KEY`). `SUPABASE_SECRET_KEY` must be the **service_role** secret from Supabase → Project Settings → API Keys — the anon/publishable key will fail inserts. Copy `.env.example` to `.env.local` for local development (typically Vettr STAGING). Production hosting should point at Vettr PROD. Do not commit secrets or expose them as `NEXT_PUBLIC_` variables.
+The contact form posts from the browser to the Supabase Edge Function `submit-contact` (`NEXT_PUBLIC_SUPABASE_URL/functions/v1/submit-contact`). That function validates the fields and inserts a row into `public.contact_submissions` with the service role. The static export has no Next.js server, so the website never holds `SUPABASE_SECRET_KEY`. Copy `.env.example` to `.env.local` for local development (typically Vettr STAGING). The Namecheap deploy workflow injects `NEXT_PUBLIC_SUPABASE_URL` from a GitHub secret; production should use the Vettr PROD project URL after the function and table exist there.
 
 The server-rendered submit button remains disabled until hydration, preventing accidental no-JavaScript submission. Failed inserts keep the entered text and show a generic error.
 
