@@ -29,31 +29,13 @@ jobs:
         run: pnpm build
 
       - name: Deploy
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_DEPLOY_PATH: ${{ secrets.SSH_DEPLOY_PATH }}
-          SSH_KEY_B64: ${{ secrets.SSH_PRIVATE_KEY_B64 }}
-        run: |
-          set -ex
-          
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          echo "$SSH_KEY_B64" | base64 -d > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          echo "Key decoded: $(head -1 ~/.ssh/deploy_key)"
-          
-          ssh-keyscan -p 21098 "$SSH_HOST" > ~/.ssh/known_hosts 2>/dev/null || true
-          
-          echo "Testing SSH connection..."
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -p 21098 -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" "echo SSH_OK" || echo "SSH_CONNECT_FAILED"
-          
-          find out -type f -exec chmod 644 {} +
-          find out -type d -exec chmod 755 {} +
-          
-          echo "Deploying to $SSH_USER@$SSH_HOST:$SSH_DEPLOY_PATH"
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -p 21098 -o ConnectTimeout=15" \
-            out/ "${SSH_USER}@${SSH_HOST}:${SSH_DEPLOY_PATH}/"
-          
-          echo "Deploy complete!"
+        uses: appleboy/scp-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 21098
+          source: "out/"
+          target: ${{ secrets.SSH_DEPLOY_PATH }}
+          rm: true
+          strip_components: 1
