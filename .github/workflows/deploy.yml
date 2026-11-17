@@ -28,14 +28,31 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Deploy
-        uses: appleboy/scp-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 21098
-          source: "out/"
-          target: ${{ secrets.SSH_DEPLOY_PATH }}
-          rm: true
-          strip_components: 1
+      - name: Deploy to Namecheap
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_DEPLOY_PATH: ${{ secrets.SSH_DEPLOY_PATH }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -ex
+          
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          
+          ssh-keyscan -p 21098 "$SSH_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          
+          echo "Testing connection..."
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -p 21098 "$SSH_USER@$SSH_HOST" "echo SSH_OK"
+          
+          find out -type f -exec chmod 644 {} +
+          find out -type d -exec chmod 755 {} +
+          
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -p 21098" \
+            out/ "$SSH_USER@$SSH_HOST:$SSH_DEPLOY_PATH/"
+          
+          echo "Deploy complete!"
