@@ -26,8 +26,6 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
         run: pnpm build
 
       - name: Write SSH key
@@ -38,6 +36,6 @@ jobs:
 
       - name: Deploy to Namecheap
         run: |
-          chmod 644 out/*
-          chmod 755 out/_next/*
+          find out -type f -exec chmod 644 {} +
+          find out -type d -exec chmod 755 {} +
           bash scripts/deploy.sh ~/.ssh/deploy_key ${{ secrets.NAMECHEEP_SSH_HOST }} ${{ secrets.NAMECHEEP_SSH_USER }} ${{ secrets.NAMECHEEP_DEPLOY_PATH }}
