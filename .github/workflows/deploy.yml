@@ -37,29 +37,23 @@ jobs:
         run: |
           set -ex
           
-          echo "SSH_HOST=$SSH_HOST SSH_USER=$SSH_USER SSH_DEPLOY_PATH=$SSH_DEPLOY_PATH"
-          
-          # Decode and write SSH key
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           echo "$SSH_KEY_B64" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          echo "Key decoded, first line: $(head -1 ~/.ssh/deploy_key)"
+          echo "Key decoded: $(head -1 ~/.ssh/deploy_key)"
           
-          # Test SSH connectivity
-          ssh-keyscan "$SSH_HOST" > ~/.ssh/known_hosts 2>/dev/null || true
-          echo "Trying SSH connection..."
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" "echo SSH_OK" || echo "SSH_CONNECT_FAILED"
+          ssh-keyscan -p 21098 "$SSH_HOST" > ~/.ssh/known_hosts 2>/dev/null || true
           
-          # Prepare files
-          echo "Build files: $(ls out/ | head -20)"
+          echo "Testing SSH connection..."
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -p 21098 -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" "echo SSH_OK" || echo "SSH_CONNECT_FAILED"
+          
           find out -type f -exec chmod 644 {} +
           find out -type d -exec chmod 755 {} +
           
-          # Deploy
-          echo "Deploying..."
+          echo "Deploying to $SSH_USER@$SSH_HOST:$SSH_DEPLOY_PATH"
           rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -o ConnectTimeout=15" \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -p 21098 -o ConnectTimeout=15" \
             out/ "${SSH_USER}@${SSH_HOST}:${SSH_DEPLOY_PATH}/"
           
           echo "Deploy complete!"
