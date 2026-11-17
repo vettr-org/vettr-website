@@ -28,14 +28,35 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Write SSH key
+      - name: Write SSH key and deploy
+        env:
+          SSH_HOST: ${{ secrets.NAMECHEEP_SSH_HOST }}
+          SSH_USER: ${{ secrets.NAMECHEEP_SSH_USER }}
+          SSH_DEPLOY_PATH: ${{ secrets.NAMECHEEP_DEPLOY_PATH }}
+          SSH_KEY: ${{ secrets.NAMECHEEP_SSH_KEY }}
         run: |
+          set -e
+          
+          # Write SSH key
           mkdir -p ~/.ssh
-          echo "${{ secrets.NAMECHEEP_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 700 ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-
-      - name: Deploy to Namecheap
-        run: |
+          echo "Key written, size: $(wc -c < ~/.ssh/deploy_key) bytes"
+          head -1 ~/.ssh/deploy_key
+          
+          # Setup known hosts
+          ssh-keyscan "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          
+          # Ensure build output exists
+          echo "Build output files: $(ls out/ | head -20)"
           find out -type f -exec chmod 644 {} +
           find out -type d -exec chmod 755 {} +
-          bash scripts/deploy.sh ~/.ssh/deploy_key ${{ secrets.NAMECHEEP_SSH_HOST }} ${{ secrets.NAMECHEEP_SSH_USER }} ${{ secrets.NAMECHEEP_DEPLOY_PATH }}
+          
+          # Deploy with rsync
+          echo "Starting deploy to $SSH_USER@$SSH_HOST:$SSH_DEPLOY_PATH"
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30" \
+            out/ "${SSH_USER}@${SSH_HOST}:${SSH_DEPLOY_PATH}/"
+          
+          echo "Deploy complete!"
