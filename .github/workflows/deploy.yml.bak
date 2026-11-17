@@ -1,0 +1,41 @@
+name: Deploy to Namecheap
+
+on:
+  push:
+    branches: [develop, main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Deploy to Namecheap
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.NAMECHEEP_SSH_HOST }}
+          username: ${{ secrets.NAMECHEEP_SSH_USER }}
+          key: ${{ secrets.NAMECHEEP_SSH_KEY }}
+          port: 22
+          source: "out/"
+          target: ${{ secrets.NAMECHEEP_DEPLOY_PATH }}
+          rm: true
+          strip_components: 1
